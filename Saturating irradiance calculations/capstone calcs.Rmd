@@ -1,0 +1,340 @@
+---
+title: "Saturating irradiance calculations"
+author: "Miranda Roethler"
+date: '2022-10-26'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Step 1 install packages
+
+```{r Photophysiology calculations}
+
+library(tidyverse)
+library(phytotools) # ** see Burdett at al. 2019 for how they used it
+
+```
+
+Example on how to use phytools
+```{r example}
+PAR <- c(5,10,20,50,100,150,250,400,800,1200) #umol m-2 s-1
+Pc <- c(1.02,1.99,3.85,9.2,15.45,21.3,28.8,34.5,39.9,38.6) #mg C m-3 hr-1
+myfit <- fitJP(PAR, Pc)
+#Plot input data
+plot(PAR, Pc, xlim=c(0,1500), ylim=c(0,40), xlab="PAR", ylab="Pc")
+#Add model fit
+E <- seq(0,1500,by=1)
+with(myfit,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+```
+
+
+Using Phytotools with our data
+
+Step 1: load in data and separate the data into groups. Each line on the graph should be in its own group (i.e. each site/treatment), meaning we have 12 groups (2 site x 2 stressors x 3 levels = 12)
+```{r load}
+# set working directory 
+#(note: will have to change this if you run on a different computer)
+setwd("/Users/mirandaroethler/Documents/GitHub/kelpexperiment2022/R files")
+
+#read in data 
+data <- read.csv("updated_photosynthesis_data.csv", header = T)
+
+#make sure R is reading columns correctly
+data$Experiment <- as.factor(data$Experiment)
+data$Treatment <- as.factor(data$Treatment)
+data$Site <- as.factor(data$Site)
+data$Target_Light_Level <- as.factor(data$Target_Light_Level)
+data$Respiration_Rate <- as.numeric(data$Respiration_Rate)
+
+#subset data into groups
+WI_temp_5 <- filter(data, Site == "Whidbey" &
+                      Experiment == "Temp" &
+                      Treatment == "5") %>%
+  drop_na()
+
+WI_temp_15 <- filter(data, Site == "Whidbey" &
+                      Experiment == "Temp" &
+                      Treatment == "15") %>%
+  drop_na()
+
+WI_temp_30 <- filter(data, Site == "Whidbey" &
+                      Experiment == "Temp" &
+                      Treatment == "30")
+
+WI_pH_7.9 <- filter(data, Site == "Whidbey" &
+                      Experiment == "pH" &
+                      Treatment == "7.9")
+
+WI_pH_7.6 <- filter(data, Site == "Whidbey" &
+                      Experiment == "pH" &
+                      Treatment == "7.6")
+
+WI_pH_7.3 <- filter(data, Site == "Whidbey" &
+                      Experiment == "pH" &
+                      Treatment == "7.3")
+
+
+EB_temp_5 <- filter(data, Site == "Elliot" &
+                      Experiment == "Temp" &
+                      Treatment == "5")
+
+EB_temp_15 <- filter(data, Site == "Elliot" &
+                      Experiment == "Temp" &
+                      Treatment == "15")
+
+EB_temp_30 <- filter(data, Site == "Elliot" &
+                      Experiment == "Temp" &
+                      Treatment == "30")
+
+EB_pH_7.9 <- filter(data, Site == "Elliot" &
+                      Experiment == "pH" &
+                      Treatment == "7.9") %>%
+  drop_na()
+
+EB_pH_7.6 <- filter(data, Site == "Elliot" &
+                      Experiment == "pH" &
+                      Treatment == "7.6")
+
+EB_pH_7.3 <- filter(data, Site == "Elliot" &
+                      Experiment == "pH" &
+                      Treatment == "7.3")
+
+
+```
+
+Now run phytotools
+
+This is the actual model code: 
+fitJP(lightlevel, oxygenflux)
+
+fitJP calculates the photosynthetic-irradiance (PE) parameters (alpha, ek) and fit statistics for PE or RLC data using the model of Jassby and Platt 1976 (a seminal paper in this field). Make sure you cite Jassby & Platt 1976 in the methods section of your paper. 
+
+In the results, you want to look under ek (saturating irradiance) and look at the estimate (this is the ek value that has been calculated) and the Pr(>|t|) as this is the p-value; you want a p-value less than 0.05. ek is reported in the same irradiance units that you measured in, namely umol photons/m2/s. 
+
+```{r phytotools}
+#WI 5C
+WI5C <- fitJP(WI_temp_5$Actual_Light_Level, WI_temp_5$Respiration_Rate)
+WI5C[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(WI_temp_5$Actual_Light_Level, WI_temp_5$Respiration_Rate, 
+     xlim=c(0,850), 
+    ylim=c(min(WI_temp_5$Respiration_Rate) - 1,
+           max(WI_temp_5$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(WI5C,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+
+
+#WI 15C
+WI15C <- fitJP(WI_temp_15$Actual_Light_Level, WI_temp_15$Respiration_Rate)
+WI15C[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(WI_temp_15$Actual_Light_Level, WI_temp_15$Respiration_Rate, 
+     xlim=c(0,850), 
+     ylim=c(min(WI_temp_15$Respiration_Rate) - 1,
+            max(WI_temp_15$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(WI15C,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+
+
+#WI 30C
+WI30C <- fitJP(WI_temp_30$Actual_Light_Level, WI_temp_30$Respiration_Rate)
+WI30C[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(WI_temp_30$Actual_Light_Level, WI_temp_30$Respiration_Rate, 
+     xlim=c(0,850), 
+     ylim=c(min(WI_temp_30$Respiration_Rate) - 1,
+            max(WI_temp_30$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(WI30C,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+
+
+#WI 7.9 pH
+WI7.9 <- fitJP(WI_pH_7.9$Actual_Light_Level, WI_pH_7.9$Respiration_Rate)
+WI7.9[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(WI_pH_7.9$Actual_Light_Level, WI_pH_7.9$Respiration_Rate, 
+     xlim=c(0,850), 
+     ylim=c(min(WI_pH_7.9$Respiration_Rate) - 1,
+            max(WI_pH_7.9$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(WI7.9,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+
+
+#WI 7.6 pH
+WI7.6 <- fitJP(WI_pH_7.6$Actual_Light_Level, WI_pH_7.6$Respiration_Rate)
+WI7.6[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(WI_pH_7.6$Actual_Light_Level, WI_pH_7.6$Respiration_Rate, 
+     xlim=c(0,850), 
+     ylim=c(min(WI_pH_7.6$Respiration_Rate) - 1,
+            max(WI_pH_7.6$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(WI7.6,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+
+
+#WI 7.3 pH
+WI7.3 <- fitJP(WI_pH_7.3$Actual_Light_Level, WI_pH_7.3$Respiration_Rate)
+WI7.3[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(WI_pH_7.3$Actual_Light_Level, WI_pH_7.3$Respiration_Rate, 
+     xlim=c(0,850), 
+     ylim=c(min(WI_pH_7.3$Respiration_Rate) - 1,
+            max(WI_pH_7.3$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(WI7.3,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+
+
+
+#EB 5C
+EB5C <- fitJP(EB_temp_5$Actual_Light_Level, EB_temp_5$Respiration_Rate)
+EB5C[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(EB_temp_5$Actual_Light_Level, EB_temp_5$Respiration_Rate, 
+     xlim=c(0,850), 
+     ylim=c(min(EB_temp_5$Respiration_Rate) - 1,
+            max(EB_temp_5$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(EB5C,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+
+
+#EB 15C
+EB15C <- fitJP(EB_temp_15$Actual_Light_Level, EB_temp_15$Respiration_Rate)
+EB15C[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(EB_temp_15$Actual_Light_Level, EB_temp_15$Respiration_Rate, 
+     xlim=c(0,850),  
+     ylim=c(min(EB_temp_15$Respiration_Rate) - 1,
+            max(EB_temp_15$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(EB15C,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+
+
+#EB 30C
+EB30C <- fitJP(EB_temp_30$Actual_Light_Level, EB_temp_30$Respiration_Rate)
+EB30C[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(EB_temp_30$Actual_Light_Level, EB_temp_30$Respiration_Rate, 
+     xlim=c(0,850), 
+     ylim=c(min(EB_temp_30$Respiration_Rate) - 1,
+            max(EB_temp_30$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(EB30C,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+
+
+#EB 7.9 pH
+EB7.9 <- fitJP(EB_pH_7.9$Actual_Light_Level, EB_pH_7.9$Respiration_Rate)
+EB7.9[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(EB_pH_7.9$Actual_Light_Level, EB_pH_7.9$Respiration_Rate, 
+     xlim=c(0,850), 
+     ylim=c(min(EB_pH_7.9$Respiration_Rate) - 1,
+            max(EB_pH_7.9$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(EB7.9,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+
+
+#EB 7.6 pH
+EB7.6 <- fitJP(EB_pH_7.6$Actual_Light_Level, EB_pH_7.6$Respiration_Rate)
+EB7.6[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(EB_pH_7.6$Actual_Light_Level, EB_pH_7.6$Respiration_Rate, 
+     xlim=c(0,850), 
+     ylim=c(min(EB_pH_7.6$Respiration_Rate) - 1,
+            max(EB_pH_7.6$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(EB7.6,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+
+
+#EB 7.3 pH
+EB7.3 <- fitJP(EB_pH_7.3$Actual_Light_Level, EB_pH_7.3$Respiration_Rate)
+EB7.3[c(1, 2, 3, 5, 6)]
+#Plot input data
+plot(EB_pH_7.3$Actual_Light_Level, EB_pH_7.3$Respiration_Rate, 
+     xlim=c(0,850), 
+     ylim=c(min(EB_pH_7.3$Respiration_Rate) - 1,
+            max(EB_pH_7.3$Respiration_Rate) + 1),
+     xlab="PAR", ylab="Oxygen flux")
+#Add model fit
+E <- seq(0,850,by=1)
+with(EB7.3,{
+  P <- alpha[1]*ek[1]*tanh(E/ek[1])
+  lines(E,P)
+})
+
+```
+
