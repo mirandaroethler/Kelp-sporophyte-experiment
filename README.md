@@ -1,0 +1,1 @@
+This is a repository for data and R code associated with the paper Roethler et al. (in prep.) "Temperature stress overrides effects of ocean acidification on bull kelp (Nereocystis luetkeana, Laminariales, Phaeophyceae) sporophyte photophysiology" (working title). 
